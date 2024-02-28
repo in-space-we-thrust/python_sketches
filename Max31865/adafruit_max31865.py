@@ -25,7 +25,10 @@ examples/simpletest.py for an example of the usage.* Author(s): Tony DiCola, ori
              Chris Osterwood, port _read and _write methods to MicroPython
 """
 import math
-import timefrom micropython import constimport spi_device#pylint: disable=bad-whitespace
+import time
+from micropython import const
+import spi_device
+#pylint: disable=bad-whitespace
 # Register and other constant values:
 _MAX31865_CONFIG_REG          = const(0x00)
 _MAX31865_CONFIG_BIAS         = const(0x80)
@@ -52,8 +55,10 @@ _MAX31865_FAULT_RTDINLOW      = const(0x08)
 _MAX31865_FAULT_OVUV          = const(0x04)
 _RTD_A = 3.9083e-3
 _RTD_B = -5.775e-7
-#pylint: enable=bad-whitespaceclass MAX31865:
-    """Driver for the MAX31865 thermocouple amplifier."""def __init__(self, spi, cs, *, rtd_nominal=100, ref_resistor=430.0, wires=2):
+#pylint: enable=bad-whitespace
+class MAX31865:
+    """Driver for the MAX31865 thermocouple amplifier."""
+    def __init__(self, spi, cs, *, rtd_nominal=100, ref_resistor=430.0, wires=3):
         self.rtd_nominal = rtd_nominal
         self.ref_resistor = ref_resistor
         self._device = spi_device.SPIDevice(spi, cs)# Set wire config register based on the number of wires specified.
@@ -65,42 +70,56 @@ _RTD_B = -5.775e-7
         else:
             # 2 or 4 wire
             config &= ~_MAX31865_CONFIG_3WIRE
-        self._write_u8(_MAX31865_CONFIG_REG, config)# Default to no bias and no auto conversion.
+        self._write_u8(_MAX31865_CONFIG_REG, config)
+        # Default to no bias and no auto conversion.
         self.set_bias(False)
-        self.set_auto_convert(False)def _read_u8(self, address):
+        self.set_auto_convert(False)
+    def _read_u8(self, address):
         # Read an 8-bit unsigned value from the specified 8-bit address.
-        buf = []with self._device as device:
+        buf = []
+        with self._device as device:
             device.write(bytes([address & 0x7F]))
-            buf = device.read(1)return buf[0]def _read_u16(self, address):
+            buf = device.read(1)
+        return buf[0]
+    def _read_u16(self, address):
         # Read a 16-bit BE unsigned value from the specified 8-bit address.
-        buf = []with self._device as device:
+        buf = []
+        with self._device as device:
             device.write(bytes([address & 0x7F]))
-            buf = device.read(2)return (buf[0] << 8) | buf[1]def _write_u8(self, address, val):
-        # Write an 8-bit unsigned value to the specified 8-bit address.with self._device as device:
+            buf = device.read(2)
+        return (buf[0] << 8) | buf[1]
+    def _write_u8(self, address, val):
+        # Write an 8-bit unsigned value to the specified 8-bit address.
+        with self._device as device:
             buf = bytearray(2)
             buf[0] = (address | 0x80) & 0xFF
             buf[1] = val & 0xFF
-            device.write(buf)@property
+            device.write(buf)
+    @property
     def bias(self):
         """Get and set the boolean state of the sensor's bias (True/False)."""
-        return bool(self._read_u8(_MAX31865_CONFIG_REG) & _MAX31865_CONFIG_BIAS)def set_bias(self, val):
+        return bool(self._read_u8(_MAX31865_CONFIG_REG) & _MAX31865_CONFIG_BIAS)
+    def set_bias(self, val):
         config = self._read_u8(_MAX31865_CONFIG_REG)
         if val:
             config |= _MAX31865_CONFIG_BIAS  # Enable bias.
         else:
             config &= ~_MAX31865_CONFIG_BIAS  # Disable bias.
-        self._write_u8(_MAX31865_CONFIG_REG, config)@property
+        self._write_u8(_MAX31865_CONFIG_REG, config)
+    @property
     def auto_convert(self):
         """Get and set the boolean state of the sensor's automatic conversion
         mode (True/False).
         """
-        return bool(self._read_u8(_MAX31865_CONFIG_REG) & _MAX31865_CONFIG_MODEAUTO)def set_auto_convert(self, val):
+        return bool(self._read_u8(_MAX31865_CONFIG_REG) & _MAX31865_CONFIG_MODEAUTO)
+    def set_auto_convert(self, val):
         config = self._read_u8(_MAX31865_CONFIG_REG)
         if val:
             config |= _MAX31865_CONFIG_MODEAUTO   # Enable auto convert.
         else:
             config &= ~_MAX31865_CONFIG_MODEAUTO  # Disable auto convert.
-        self._write_u8(_MAX31865_CONFIG_REG, config)@property
+        self._write_u8(_MAX31865_CONFIG_REG, config)
+    @property
     def fault(self):
         """Get the fault state of the sensor.  Use `clear_faults` to clear the
         fault state.  Returns a 6-tuple of boolean values which indicate if any
@@ -121,12 +140,14 @@ _RTD_B = -5.775e-7
         rtdinlow   = bool(faults & _MAX31865_FAULT_RTDINLOW)
         ovuv       = bool(faults & _MAX31865_FAULT_OVUV)
         #pylint: enable=bad-whitespace
-        return (highthresh, lowthresh, refinlow, refinhigh, rtdinlow, ovuv)def clear_faults(self):
+        return (highthresh, lowthresh, refinlow, refinhigh, rtdinlow, ovuv)
+    def clear_faults(self):
         """Clear any fault state previously detected by the sensor."""
         config = self._read_u8(_MAX31865_CONFIG_REG)
         config &= ~0x2C
         config |= _MAX31865_CONFIG_FAULTSTAT
-        self._write_u8(_MAX31865_CONFIG_REG, config)def read_rtd(self):
+        self._write_u8(_MAX31865_CONFIG_REG, config)
+    def read_rtd(self):
         """Perform a raw reading of the thermocouple and return its 15-bit
         value.  You'll need to manually convert this to temperature using the
         nominal value of the resistance-to-digital conversion and some math.  If you just want
@@ -142,13 +163,15 @@ _RTD_B = -5.775e-7
         rtd = self._read_u16(_MAX31865_RTDMSB_REG)
         # Remove fault bit.
         rtd >>= 1
-        return rtd@property
+        return rtd
+    @property
     def resistance(self):
         """Read the resistance of the RTD and return its value in Ohms."""
         resistance = self.read_rtd()
         resistance /= 32768
         resistance *= self.ref_resistor
-        return resistance@property
+        return resistance
+    @property
     def temperature(self):
         """Read the temperature of the sensor and return its value in degrees
         Celsius.
@@ -168,7 +191,8 @@ _RTD_B = -5.775e-7
         if temp >= 0:
             return temp# Have to normalize to 100 ohms if temperure is less than 0C for the following math to work
         raw_reading /= self.rtd_nominal
-        raw_reading *= 100rpoly = raw_readingtemp = -242.02
+        raw_reading *= 100
+        rpoly = raw_readingtemp = -242.02
         temp += 2.2228 * rpoly
         rpoly *= raw_reading  # square
         temp += 2.5859e-3 * rpoly
