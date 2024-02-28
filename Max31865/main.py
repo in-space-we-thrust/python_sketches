@@ -1,5 +1,3 @@
-
-
 ## MicroPython Imports
 import time
 import machine
