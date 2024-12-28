@@ -1,4 +1,5 @@
 # sensors/temperature_sensor.py
+import uasyncio as asyncio
 from base_sensor import Sensor
 import max31856, tpr, yf_s201
 
@@ -44,10 +45,10 @@ class FlowSensor(Sensor):
 
     PERIOD = 1 / 10  # Период опроса, 10 раз в секунду
 
-    def sense(self):
+    async def sense(self):
         # Чтение данных с каждого расходомера и сохранение результатов
-        flowMetr1 = self.tpr11.frequency_measurement()
-        flowMetr2 = self.yf.flow_measurement()
+        flowMetr1 = await self.tpr11.frequency_measurement()
+        flowMetr2 = await self.yf.flow_measurement()
          
         self.SENSE_RESULTS[self.SENSOR_IDS.FLOW_METR1] = flowMetr1
         self.SENSE_RESULTS[self.SENSOR_IDS.FLOW_METR2] = flowMetr2
