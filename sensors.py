@@ -36,7 +36,7 @@ class FlowSensor(Sensor):
         super().__init__(name)
         # Инициализируем расходомеры
         self.tpr11 = tpr.TPR(pulsPin=5, dimNumber=10, timeout=55000)
-        self.yf = yf_s201.yf_s201(pulsPin=4, dimNumber=10, timeout=55000)
+        self.yf = yf_s201.YfS201(pulsPin=4, dimNumber=10, timeout=55000)
 
     class SENSOR_IDS:
         # Объявляем ID датчиков
