@@ -27,7 +27,8 @@ class PressureSensor(Sensor):
         for channel, sensor_id in enumerate([self.SENSOR_IDS.PRESSURE_PP1, self.SENSOR_IDS.PRESSURE_PP2, self.SENSOR_IDS.PRESSURE_PP3]):
             raw = self.adc.read(7, channel)
             voltage = self.adc.raw_to_v(raw)
-            self.SENSE_RESULTS[sensor_id] = voltage
+            self.SENSE_RESULTS[sensor_id] = (voltage/222) * 3113.99116507371 - 12.6790689979901
+
 
 
 class FlowSensor(Sensor):
