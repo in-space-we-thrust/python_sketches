@@ -37,19 +37,19 @@ class FlowSensor(Sensor):
         super().__init__(name)
         # Инициализируем расходомеры
         self.tpr11 = tpr.TPR(pulsPin=5, dimNumber=10, timeout=55000)
-        self.yf = yf_s201.YfS201(pulsPin=4, dimNumber=10, timeout=55000)
+        self.yf = yf_s201.WaterFlowMeter(pulsPin=4)
 
     class SENSOR_IDS:
         # Объявляем ID датчиков
         FLOW_METR1 = 4
         FLOW_METR2 = 5       
 
-    PERIOD = 1 / 10  # Период опроса, 10 раз в секунду
+    PERIOD = 1  # Период опроса, раз в секунду
 
     async def sense(self):
         # Чтение данных с каждого расходомера и сохранение результатов
         flowMetr1 = await self.tpr11.frequency_measurement()
-        flowMetr2 = await self.yf.flow_measurement()
+        flowMetr2 = await self.yf.measure_flow()
          
         self.SENSE_RESULTS[self.SENSOR_IDS.FLOW_METR1] = flowMetr1
         self.SENSE_RESULTS[self.SENSOR_IDS.FLOW_METR2] = flowMetr2

@@ -1,49 +1,25 @@
 import uasyncio as asyncio
-from machine import Pin, time_pulse_us
+from machine import Pin
 import time
 
-class YfS201:
-    def __init__(self, pulsPin=5, dimNumber=10, timeout=55000):
+class WaterFlowMeter:
+    def __init__(self, pulsPin=4, calibration_factor=450):
         self.pulsPin = pulsPin
-        self.dimNumber = dimNumber
-        self.timeout = timeout
-        self.calibration_factor = 450  # Количество импульсов на литр
-        self._setup_gpio()
+        self.calibration_factor = calibration_factor
+        self.pulse_count = 0
 
-    def _setup_gpio(self):
+        # Настроить GPIO пин
         self.p = Pin(self.pulsPin, Pin.IN, Pin.PULL_DOWN)
+        self.p.irq(trigger=Pin.IRQ_RISING, handler=self.pulse_callback)
+    
+    def pulse_callback(self, pin):
+        self.pulse_count += 1
 
-    async def _median_of_n(self):
-        values = []
-        for _ in range(self.dimNumber):
-            pulse_high = await self._time_pulse_us_async(1)
-            pulse_low = await self._time_pulse_us_async(0)
-            if pulse_high < 0 or pulse_low < 0:
-                continue  # пропускаем некорректные измерения
-            values.append(pulse_high + pulse_low)
-        if not values:
-            return float('inf')  # вернуть бесконечность если все измерения некорректны
-        return sum(values) / len(values)
+    async def measure_flow(self):
+        self.pulse_count = 0
+        await asyncio.sleep(1)  # Период измерения, 1 секунда
 
-    async def _time_pulse_us_async(self, state):
-        # Асинхронный аналог функции time_pulse_us
-        start = time.ticks_us()
-        while True:
-            if self.p.value() == state:
-                break
-            await asyncio.sleep_us(10)  # позволяет переключиться на другие задачи
-            if time.ticks_diff(time.ticks_us(), start) > self.timeout:
-                return -1
-        start = time.ticks_us()
-        while True:
-            if self.p.value() != state:
-                return time.ticks_diff(time.ticks_us(), start)
-            await asyncio.sleep_us(10)
-            if time.ticks_diff(time.ticks_us(), start) > self.timeout:
-                return -1
+        # Рассчитываем поток в литрах за последний интервал
+        liters_per_second = self.pulse_count / self.calibration_factor
 
-    async def flow_measurement(self):
-        period = await self._median_of_n()
-        if period == float('inf'):
-            return 0  # вернуть 0 если частоту невозможно измерить
-        return 1000000 * 60 / (period * self.calibration_factor)
+        return liters_per_second

@@ -25,26 +25,20 @@ class TPR:
         return sum(values) / len(values)
 
     async def _time_pulse_us_async(self, state):
-        # Асинхронный аналог функции time_pulse_us
         start = time.ticks_us()
-        while True:
-            if self.p.value() == state:
-                break
-            await asyncio.sleep_us(10)  # позволяет переключиться на другие задачли
+        while self.p.value() != state:
+            await asyncio.sleep_ms(10)
             if time.ticks_diff(time.ticks_us(), start) > self.timeout:
                 return -1
         start = time.ticks_us()
-        while True:
-            if self.p.value() != state:
-                return time.ticks_diff(time.ticks_us(), start)
-            await asyncio.sleep_us(10)
+        while self.p.value() == state:
+            await asyncio.sleep_ms(10)
             if time.ticks_diff(time.ticks_us(), start) > self.timeout:
                 return -1
+        return time.ticks_diff(time.ticks_us(), start)
 
-    async def frequency_measurement(self):
+    async def flow_measurement(self):
         period = await self._median_of_n()
         if period == float('inf'):
             return 0  # вернуть 0 если частоту невозможно измерить
         return 1000000 / period
-    
-        
