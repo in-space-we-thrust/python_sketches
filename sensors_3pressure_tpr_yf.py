@@ -1,7 +1,7 @@
 # sensors/temperature_sensor.py
 import uasyncio as asyncio
 from base_sensor import Sensor
-import max31856, tpr, yf_s201
+import tpr, yf_s201
 
 from machine import I2C, Pin
 from ads1115 import ADS1115
@@ -22,12 +22,12 @@ class PressureSensor(Sensor):
 
     PERIOD = 1 / 10  # Период опроса, 10 раз в секунду
 
-    def sense(self):
+    async def sense(self):
         # Чтение данных с каждого датчика давления и сохранение результатов
         for channel, sensor_id in enumerate([self.SENSOR_IDS.PRESSURE_PP1, self.SENSOR_IDS.PRESSURE_PP2, self.SENSOR_IDS.PRESSURE_PP3]):
             raw = self.adc.read(7, channel)
             voltage = self.adc.raw_to_v(raw)
-            self.SENSE_RESULTS[sensor_id] = (voltage/222) * 3113.99116507371 - 12.6790689979901
+            self.SENSE_RESULTS[sensor_id] = voltage
 
 
 
@@ -44,11 +44,11 @@ class FlowSensor(Sensor):
         FLOW_METR1 = 4
         FLOW_METR2 = 5       
 
-    PERIOD = 1  # Период опроса, раз в секунду
+    PERIOD = 1/100  # Период опроса, раз в секунду
 
     async def sense(self):
         # Чтение данных с каждого расходомера и сохранение результатов
-        flowMetr1 = await self.tpr11.frequency_measurement()
+        flowMetr1 = await self.tpr11.flow_measurement()
         flowMetr2 = await self.yf.measure_flow()
          
         self.SENSE_RESULTS[self.SENSOR_IDS.FLOW_METR1] = flowMetr1
